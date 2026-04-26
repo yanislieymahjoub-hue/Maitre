@@ -1,0 +1,18 @@
+[
+    {
+        "role": "user",
+        "content": "hey"
+    },
+    {
+        "role": "assistant",
+        "content": "Salut Yala, comment \u00e7a va aujourd\u2019hui ?"
+    },
+    {
+        "role": "user",
+        "content": "hey"
+    },
+    {
+        "role": "assistant",
+        "content": "Yo Yala, quoi de neuf ? T\u2019es en train de faire quoi l\u00e0 ?"
+    }
+]

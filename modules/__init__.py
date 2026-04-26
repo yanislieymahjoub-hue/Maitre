@@ -1,0 +1,1 @@
+"""Modules mixin pour AssistantApp."""

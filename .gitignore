@@ -1,0 +1,57 @@
+# =============================================================================
+# .gitignore — Assistant IA
+# =============================================================================
+# But : eviter qu'un secret (mot de passe IMAP, cle de chiffrement, donnees
+# personnelles) ne se retrouve par accident dans un commit Git si tu decides
+# un jour de versionner le projet.
+# =============================================================================
+
+# --- Secrets et cles ---
+.env
+.env.local
+.env.*.local
+.crypto_key
+
+# --- Donnees utilisateurs (contiennent des infos perso) ---
+users_db.json
+permissions_requests.json
+experience_log.json
+memory_*.json
+agenda_*.json
+mail_summaries_*.json
+mail_tracking_*.json
+triaged_mails_*.json
+
+# --- Logs et backups (souvent volumineux + parfois sensibles) ---
+logs/
+backups/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Environnements virtuels ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- IDE / editeurs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Pyinstaller / packaging ---
+*.spec
