@@ -264,32 +264,48 @@ class EmailMixin:
     # ===================================================================
     # CACHE DES RESUMES DE MAIL (UID -> mail_data)
     # ===================================================================
+    # Stockage en SQLite via modules/mail_cache_db.py. L'API publique
+    # (_load_mail_cache / _save_mail_cache) reste dict-based pour ne rien
+    # casser dans le pipeline existant. Le JSON legacy
+    # `mail_summaries_<USER>.json` est aspire automatiquement au 1er load.
     def _mail_cache_path(self):
+        # Conserve pour compat (utilise nulle part ailleurs apres migration)
         return f"mail_summaries_{USERNAME}.json"
 
     def _load_mail_cache(self):
         try:
-            p = self._mail_cache_path()
-            if os.path.exists(p):
-                with open(p, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if isinstance(data, dict):
-                        return data
+            from modules import mail_cache_db
+            return mail_cache_db.load_cache(USERNAME)
         except Exception as e:
-            print(f"Erreur load mail cache : {e}")
-        return {}
+            print(f"Erreur load mail cache (fallback JSON) : {e}")
+            # Fallback : ancien comportement JSON, au cas ou.
+            try:
+                p = self._mail_cache_path()
+                if os.path.exists(p):
+                    with open(p, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        if isinstance(data, dict):
+                            return data
+            except Exception:
+                pass
+            return {}
 
     def _save_mail_cache(self, cache):
         try:
-            # Cap 5000 mails pour ne pas exploser le fichier
-            if len(cache) > 5000:
-                keys = list(cache.keys())
-                for k in keys[:-5000]:
-                    cache.pop(k, None)
-            with open(self._mail_cache_path(), "w", encoding="utf-8") as f:
-                json.dump(cache, f, ensure_ascii=False)
+            from modules import mail_cache_db
+            mail_cache_db.save_cache(USERNAME, cache)
         except Exception as e:
-            print(f"Erreur save mail cache : {e}")
+            print(f"Erreur save mail cache (fallback JSON) : {e}")
+            try:
+                if len(cache) > 5000:
+                    keys = list(cache.keys())
+                    for k in keys[:-5000]:
+                        cache.pop(k, None)
+                with open(self._mail_cache_path(), "w",
+                          encoding="utf-8") as f:
+                    json.dump(cache, f, ensure_ascii=False)
+            except Exception as ee:
+                print(f"Erreur save mail cache : {ee}")
 
     def _parse_mail_message(self, msg):
         """Extrait subject/sender/date/body/attachments d'un email.Message."""
