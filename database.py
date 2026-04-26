@@ -402,56 +402,74 @@ def update_experience_outcome(entry_id: int, outcome: str, score: float, correct
 # ==========================================
 #   PERMISSIONS MODULE
 # ==========================================
+# Le stockage est maintenant en SQLite (permissions.db) — voir
+# modules/permissions_db.py. La premiere fois que ce module est importe,
+# il migre automatiquement le contenu de permissions_requests.json (qui
+# avait atteint 186 Ko et ralentissait toutes les ecritures de
+# permissions). Les fonctions ci-dessous sont des delegations transparentes
+# pour conserver l'API publique : aucun appelant n'a besoin de changer.
 
-def load_permission_requests() -> list:
-    if not os.path.exists(PERMISSIONS_LOG):
-        return []
-    with open(PERMISSIONS_LOG, "r", encoding="utf-8") as f:
-        try:
-            return json.load(f)
-        except:
+try:
+    from modules.permissions_db import (
+        add_permission_request,
+        resolve_permission_request,
+        get_pending_requests,
+        clear_resolved_requests,
+        load_permission_requests,
+        save_permission_requests,
+    )
+except Exception as _e:
+    # Fallback (tres improbable) : on garde une implementation JSON minimale
+    # pour ne jamais casser la suite si SQLite est cassee.
+    print(f"[database] permissions_db indispo, fallback JSON : {_e}")
+
+    def load_permission_requests() -> list:
+        if not os.path.exists(PERMISSIONS_LOG):
             return []
+        with open(PERMISSIONS_LOG, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except Exception:
+                return []
 
-def save_permission_requests(requests: list):
-    with open(PERMISSIONS_LOG, "w", encoding="utf-8") as f:
-        json.dump(requests, f, indent=4, ensure_ascii=False)
+    def save_permission_requests(requests: list):
+        with open(PERMISSIONS_LOG, "w", encoding="utf-8") as f:
+            json.dump(requests, f, indent=4, ensure_ascii=False)
 
-def add_permission_request(username: str, req_type: str, title: str, description: str, action_data: dict = None) -> int:
-    requests = load_permission_requests()
-    entry_id = int(datetime.now().timestamp() * 1000)
-    requests.append({
-        "id": entry_id,
-        "username": username,
-        "type": req_type,
-        "title": title,
-        "description": description,
-        "action_data": action_data or {},
-        "status": "pending",
-        "created_at": datetime.now().isoformat(),
-        "resolved_at": None
-    })
-    save_permission_requests(requests)
-    return entry_id
+    def add_permission_request(username: str, req_type: str, title: str,
+                                description: str,
+                                action_data: dict = None) -> int:
+        requests = load_permission_requests()
+        entry_id = int(datetime.now().timestamp() * 1000)
+        requests.append({
+            "id": entry_id, "username": username, "type": req_type,
+            "title": title, "description": description,
+            "action_data": action_data or {}, "status": "pending",
+            "created_at": datetime.now().isoformat(), "resolved_at": None,
+        })
+        save_permission_requests(requests)
+        return entry_id
 
-def resolve_permission_request(entry_id: int, status: str) -> dict:
-    requests = load_permission_requests()
-    resolved = None
-    for req in requests:
-        if req.get("id") == entry_id:
-            req["status"] = status
-            req["resolved_at"] = datetime.now().isoformat()
-            resolved = req
-            break
-    save_permission_requests(requests)
-    return resolved
+    def resolve_permission_request(entry_id: int, status: str) -> dict:
+        requests = load_permission_requests()
+        resolved = None
+        for req in requests:
+            if req.get("id") == entry_id:
+                req["status"] = status
+                req["resolved_at"] = datetime.now().isoformat()
+                resolved = req
+                break
+        save_permission_requests(requests)
+        return resolved
 
-def get_pending_requests(username: str = None) -> list:
-    requests = load_permission_requests()
-    pending = [r for r in requests if r["status"] == "pending"]
-    if username:
-        pending = [r for r in pending if r["username"] == username]
-    return pending
+    def get_pending_requests(username: str = None) -> list:
+        requests = load_permission_requests()
+        pending = [r for r in requests if r.get("status") == "pending"]
+        if username:
+            pending = [r for r in pending if r.get("username") == username]
+        return pending
 
-def clear_resolved_requests():
-    requests = load_permission_requests()
-    save_permission_requests([r for r in requests if r["status"] == "pending"])
+    def clear_resolved_requests():
+        requests = load_permission_requests()
+        save_permission_requests([r for r in requests
+                                   if r.get("status") == "pending"])
