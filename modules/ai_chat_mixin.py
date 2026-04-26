@@ -303,6 +303,13 @@ class AIChatMixin:
             border   = "#22b9ff"
             fg       = "#dde4ff"
             max_w    = 300
+        elif sender == "BRIEFING":
+            # Style distinct or pour le briefing matinal (cf. hub d'entree)
+            side     = "w"
+            bg       = "#1a1400"
+            border   = "#ffd700"
+            fg       = "#ffe27a"
+            max_w    = 340
         else:  # SYSTEM
             side     = "w"
             bg       = "#1a1025"
@@ -332,6 +339,44 @@ class AIChatMixin:
         except Exception:
             pass
         return msg_box
+
+    def show_morning_briefing(self, force: bool = False, open_chat: bool = True):
+        """Genere et affiche le briefing matinal dans le chat.
+
+        - force=False : n'affiche qu'une fois par jour (idempotent)
+        - open_chat=True : ouvre le chat si pas deja ouvert
+        Le calcul tourne dans un thread daemon pour ne pas bloquer l'UI.
+        """
+        from datetime import date as _date
+        today_iso = _date.today().isoformat()
+        if not force and getattr(self, "_briefing_shown_date", None) == today_iso:
+            return
+        self._briefing_shown_date = today_iso
+
+        def _worker():
+            try:
+                from modules.morning_briefing import generate_briefing
+                br = generate_briefing(USERNAME)
+            except Exception as e:
+                print(f"Erreur generate_briefing : {e}")
+                return
+            text = br.get("raw_text", "")
+            if not text:
+                return
+            # Ouvre le chat si demande, puis pousse le message en mode BRIEFING
+            def _push():
+                try:
+                    if open_chat and self.mode != "chat":
+                        self.toggle_chat()
+                    self.add_message("BRIEFING", text)
+                except Exception as e:
+                    print(f"Erreur push briefing : {e}")
+            try:
+                self.root.after(0, _push)
+            except Exception:
+                pass
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def smart_reset(self):
         self.history = []

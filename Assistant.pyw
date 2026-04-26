@@ -111,6 +111,10 @@ class AssistantApp(
         self._last_report_date    = None
         self._last_digest_date    = None
 
+        # Briefing matinal (heure cible, ON par defaut, idempotent)
+        self.briefing_hour        = 8
+        self._briefing_shown_date = None
+
         # Optimisations inbox (tout activé par defaut)
         self.init_inbox_optim()
 

@@ -118,6 +118,15 @@ class UIFramesMixin:
                      font=("Futura", 8),
                      text_color="#22b9ff").pack(anchor="w")
 
+        # Bouton briefing du jour (force=True pour ouvrir a la demande)
+        ctk.CTkButton(
+            header, text="☀", width=40, height=32,
+            fg_color="#0f0f22", hover_color="#ffd700",
+            text_color="#ffd700",
+            corner_radius=16, font=("Arial", 14, "bold"),
+            command=lambda: self.show_morning_briefing(
+                force=True, open_chat=False)).pack(side="right", padx=(0, 8))
+
         ctk.CTkButton(header, text="⟲", width=40, height=32,
                       fg_color="#0f0f22", hover_color=couleur_accent,
                       text_color=couleur_accent,

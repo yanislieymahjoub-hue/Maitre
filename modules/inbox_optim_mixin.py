@@ -694,6 +694,14 @@ class InboxOptimMixin:
         except Exception as e:
             print(f"Erreur morning digest : {e}")
 
+        # Affiche aussi le briefing complet (agenda + finance + actions...)
+        # dans le chat. show_morning_briefing est idempotent (1x/jour).
+        try:
+            if hasattr(self, "show_morning_briefing"):
+                self.show_morning_briefing(force=False, open_chat=True)
+        except Exception as e:
+            print(f"Erreur push briefing matinal : {e}")
+
     # =============================================================
     #     I. FOCUS MODE (UI)
     # =============================================================

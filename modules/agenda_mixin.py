@@ -111,7 +111,7 @@ class AgendaMixin:
                     if self._last_report_date != today:
                         self._last_report_date = today
                         threading.Thread(target=self._send_daily_report, daemon=True).start()
-                # Resume matinal inbox (H. morning digest)
+                # Resume matinal inbox (H. morning digest, OPT-IN, par mail)
                 try:
                     digest_hour = int(
                         getattr(self, "optim_settings", {}).get("digest_hour", 8))
@@ -125,6 +125,18 @@ class AgendaMixin:
                                          daemon=True).start()
                 except Exception:
                     pass
+
+                # Briefing matinal complet (DEFAULT ON, dans le chat)
+                # Independant du digest mail. Idempotent (1x/jour).
+                try:
+                    brief_hour = int(getattr(self, "briefing_hour", 8))
+                    if (now.hour == brief_hour and now.minute < 2
+                            and hasattr(self, "show_morning_briefing")
+                            and getattr(self, "_briefing_shown_date", None) != today.isoformat()):
+                        # Le show_morning_briefing gere lui-meme le flag _briefing_shown_date.
+                        self.show_morning_briefing(force=False, open_chat=True)
+                except Exception as _e:
+                    print(f"Erreur briefing scheduler : {_e}")
 
         threading.Thread(target=_checker, daemon=True).start()
 
