@@ -141,25 +141,10 @@ class AnimationsMixin:
             cx + Rc + pulse, cy + Rc + pulse,
             fill="", outline="#1a1a1a", width=1, tags="hublogo")
 
-        # Disque central NOIR avec gradient simule (3 cercles concentriques)
-        # Du plus clair (haut-gauche) au plus sombre
+        # Disque central : UN seul cercle noir uniforme (pas de gradient).
         self.hub_canvas.create_oval(
             cx - Rc, cy - Rc, cx + Rc, cy + Rc,
-            fill="#1a1a1a", outline="", tags="hublogo")
-        self.hub_canvas.create_oval(
-            cx - Rc + 4, cy - Rc + 4,
-            cx + Rc - 12, cy + Rc - 12,
-            fill="#0f0f0f", outline="", tags="hublogo")
-        self.hub_canvas.create_oval(
-            cx - Rc + 12, cy - Rc + 12,
-            cx + Rc - 4, cy + Rc - 4,
             fill="#000000", outline="", tags="hublogo")
-        # Highlight inset top (suggere une lumiere)
-        self.hub_canvas.create_arc(
-            cx - Rc + 2, cy - Rc + 2,
-            cx + Rc - 2, cy + Rc - 2,
-            start=30, extent=120, outline="#3a3a3a",
-            width=1, style="arc", tags="hublogo")
 
         # Logo Y dedans (même geometrie que principal_hub)
         ry = 28.88
@@ -262,8 +247,8 @@ class AnimationsMixin:
         cx, cy = self.hub_size // 2, self.hub_size // 2
 
         self.hub_rotation += 1.5
-        # NB : le cercle hachure exterieur a ete supprime (demande du user).
-        # On garde uniquement les 2 arcs qui tournent comme accent.
+        # Le cercle hachure exterieur est supprime, mais on garde les 2 arcs
+        # qui tournent comme accent (radar style).
         self.hub_canvas.create_arc(cx-155, cy-155, cx+155, cy+155,
                                    start=-self.hub_rotation, extent=60,
                                    outline="#ffffff", width=2, style="arc", tags="menu")
