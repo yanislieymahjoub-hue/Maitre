@@ -123,12 +123,97 @@ class AnimationsMixin:
                                    outline="#442222", width=1, dash=(5, 5), tags="logo")
 
     def _hub_logo_loop(self):
-        """Boucle dédiée à l'animation du logo central du hub."""
+        """Logo central du hub mail : meme rendu que le hub principal
+        (halos pulsants + disque + hexagone tournant + Y blanc + tick
+        marks + diamant), mais avec un fond NOIR au lieu d'indigo."""
         if self.mode != "hub":
             return
-        pulse = (math.sin(time.time() * 5) + 1) / 2
-        self.draw_logo(self.hub_canvas, self.hub_size//2, self.hub_size//2, 45, pulse,
-                       with_bg=True, color=couleur_hub_pale)
+        cx, cy = self.hub_size // 2, self.hub_size // 2
+        spin = self.hub_rotation
+        self.hub_canvas.delete("hublogo")
+
+        # UN SEUL halo pulsant noir autour du disque central (bounce 3 Hz)
+        t = time.time()
+        pulse = 8 + 5 * math.sin(t * 3)  # bounce entre +3 et +13 px du rayon
+        Rc = 54  # rayon central (108/2)
+        self.hub_canvas.create_oval(
+            cx - Rc - pulse, cy - Rc - pulse,
+            cx + Rc + pulse, cy + Rc + pulse,
+            fill="", outline="#1a1a1a", width=1, tags="hublogo")
+
+        # Disque central NOIR avec gradient simule (3 cercles concentriques)
+        # Du plus clair (haut-gauche) au plus sombre
+        self.hub_canvas.create_oval(
+            cx - Rc, cy - Rc, cx + Rc, cy + Rc,
+            fill="#1a1a1a", outline="", tags="hublogo")
+        self.hub_canvas.create_oval(
+            cx - Rc + 4, cy - Rc + 4,
+            cx + Rc - 12, cy + Rc - 12,
+            fill="#0f0f0f", outline="", tags="hublogo")
+        self.hub_canvas.create_oval(
+            cx - Rc + 12, cy - Rc + 12,
+            cx + Rc - 4, cy + Rc - 4,
+            fill="#000000", outline="", tags="hublogo")
+        # Highlight inset top (suggere une lumiere)
+        self.hub_canvas.create_arc(
+            cx - Rc + 2, cy - Rc + 2,
+            cx + Rc - 2, cy + Rc - 2,
+            start=30, extent=120, outline="#3a3a3a",
+            width=1, style="arc", tags="hublogo")
+
+        # Logo Y dedans (même geometrie que principal_hub)
+        ry = 28.88
+        # Hexagone tournant (rotation spin*0.4 + 30deg)
+        hex_pts = []
+        for i in range(6):
+            a = math.radians(i * 60 + spin * 0.4 + 30)
+            hex_pts.extend([cx + ry * 1.22 * math.cos(a),
+                            cy + ry * 1.22 * math.sin(a)])
+        self.hub_canvas.create_polygon(
+            hex_pts, fill="", outline="#666666", width=1, tags="hublogo")
+        # Cercle interieur
+        circle_r = ry * 0.96
+        self.hub_canvas.create_oval(
+            cx - circle_r, cy - circle_r,
+            cx + circle_r, cy + circle_r,
+            fill="", outline="#444444", width=1, tags="hublogo")
+        # 12 tick marks (4 cardinaux plus epais)
+        for i in range(12):
+            a = math.radians(i * 30)
+            inner = 0.82 if i % 3 == 0 else 0.88
+            x1 = cx + ry * inner * math.cos(a)
+            y1 = cy + ry * inner * math.sin(a)
+            x2 = cx + ry * 0.96 * math.cos(a)
+            y2 = cy + ry * 0.96 * math.sin(a)
+            self.hub_canvas.create_line(
+                x1, y1, x2, y2, fill="#888888",
+                width=2 if i % 3 == 0 else 1, tags="hublogo")
+        # Y blanc geometrique (2 branches + tige + diamant)
+        self.hub_canvas.create_line(
+            cx - ry * 0.45, cy - ry * 0.52, cx, cy - ry * 0.02,
+            fill="#ffffff", width=2, capstyle="round", tags="hublogo")
+        self.hub_canvas.create_line(
+            cx + ry * 0.45, cy - ry * 0.52, cx, cy - ry * 0.02,
+            fill="#ffffff", width=2, capstyle="round", tags="hublogo")
+        self.hub_canvas.create_line(
+            cx, cy - ry * 0.02, cx, cy + ry * 0.46,
+            fill="#ffffff", width=2, capstyle="round", tags="hublogo")
+        # Diamant au croisement
+        self.hub_canvas.create_polygon(
+            cx, cy - ry * 0.14,
+            cx + ry * 0.08, cy - ry * 0.02,
+            cx, cy + ry * 0.1,
+            cx - ry * 0.08, cy - ry * 0.02,
+            fill="#888888", outline="", tags="hublogo")
+        # 3 dots aux sommets pairs de l'hexagone
+        for i in (0, 2, 4):
+            a = math.radians(i * 60 + spin * 0.4 + 30)
+            px = cx + ry * 1.22 * math.cos(a)
+            py = cy + ry * 1.22 * math.sin(a)
+            self.hub_canvas.create_oval(
+                px - 1.4, py - 1.4, px + 1.4, py + 1.4,
+                fill="#aaaaaa", outline="", tags="hublogo")
+
         self.root.after(30, self._hub_logo_loop)
 
     def _refresh_pending_cache(self):
@@ -141,7 +226,15 @@ class AnimationsMixin:
         if self.mode == "hub":
             self.root.after(5000, self._refresh_pending_cache)
 
-    def update_hub_animation(self):
+    def update_hub_animation(self, gen: int = 0):
+        # Gen-tracking : si une generation plus recente a demarre OU si on
+        # a quitte le hub, on s'auto-termine. Empeche les loops fantomes
+        # qui causent dedoublement / textes superposes.
+        if gen != getattr(self, "_hub_loop_gen", 0):
+            return
+        if self.mode != "hub":
+            return
+
         target = 1.0 if self.hub_open else 0.0
         changed = False
 
@@ -161,18 +254,16 @@ class AnimationsMixin:
         # Dessiner
         self.draw_hub_elements()
 
-        still_open = self.hub_open and self.mode == "hub"
-        if changed or still_open:
-            self.root.after(40, self.update_hub_animation)
+        # Re-schedule en propageant la meme generation.
+        self.root.after(40, lambda g=gen: self.update_hub_animation(g))
 
     def draw_hub_elements(self):
         self.hub_canvas.delete("menu")
         cx, cy = self.hub_size // 2, self.hub_size // 2
 
         self.hub_rotation += 1.5
-        # Cercle orbital extérieur pointillé (aspect radar)
-        self.hub_canvas.create_oval(cx-170, cy-170, cx+170, cy+170,
-                                    outline="#1a1a2e", width=1, dash=(2,10), tags="menu")
+        # NB : le cercle hachure exterieur a ete supprime (demande du user).
+        # On garde uniquement les 2 arcs qui tournent comme accent.
         self.hub_canvas.create_arc(cx-155, cy-155, cx+155, cy+155,
                                    start=-self.hub_rotation, extent=60,
                                    outline="#ffffff", width=2, style="arc", tags="menu")
